@@ -112,6 +112,19 @@ def artists(time_range, token):
     return {"artists": results["items"]}
 
 
+@app.route("/newtoken/<refresh_token>", methods=["GET", "POST"])
+def get_new_token(refresh_token):
+    payload = {"grant_type": "refresh_token", "refresh_token": refresh_token}
+    auth_header = base64.b64encode(
+        six.text_type(client_id + ":" + client_secret).encode("ascii")
+    )
+    headers = {"Authorization": "Basic %s" % auth_header.decode("ascii")}
+    resp = requests.post(
+        f"https://accounts.spotify.com/api/token", data=payload, headers=headers
+    ).json()
+    return resp
+
+
 @app.route("/auth", methods=["GET", "POST"])
 def auth():
     print("exchanging token...")
@@ -130,11 +143,16 @@ def auth():
             f"https://accounts.spotify.com/api/token", data=payload, headers=headers
         ).json()
         token = resp["access_token"]
+        refresh_token = resp["refresh_token"]
+        expires_in = resp["expires_in"] + time.time()
         # sp = spotipy.Spotify(auth=token)
         # results = sp.current_user_top_artists(limit=50)
         # print(results)
         # return results
-    return redirect(f"http://localhost:3000/dashboard/?token={token}", 302)
+    return redirect(
+        f"http://localhost:3000/dashboard/?token={token}&refresh_token={refresh_token}",
+        302,
+    )
 
 
 if __name__ == "__main__":
